@@ -20,10 +20,12 @@ jobs:
           version: master
       - name: Build VST
         run: "zig build -Drelease-fast"
+      - name: 'Tar .vst directory'
+        run: tar -cvf zig-analyzer.vst.tar zig-cache/vst/zig-analyzer.vst
       - uses: actions/upload-artifact@v2
         with:
           name: zig-analyzer-macos-${{ github.sha }}.vst
-          path: zig-cache/vst/zig-analyzer.vst
+          path: zig-analyzer.vst.tar
 
   build-windows:
     runs-on: windows-latest
