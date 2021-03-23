@@ -33,5 +33,5 @@ jobs:
         run: "zig build -Drelease-fast"
       - uses: actions/upload-artifact@v2
         with:
-          name: zig-analyzer-macos-${github.sha}.vst
+          name: zig-analyzer-macos-${{ github.sha }}.vst
           path: zig-cache/vst/zig-analyzer.vst
