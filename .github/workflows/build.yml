@@ -1,27 +1,16 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Build Binaries
 
-# Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  build-macos:
     runs-on: macos-latest
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
           submodules: 'recursive'
@@ -35,3 +24,20 @@ jobs:
         with:
           name: zig-analyzer-macos-${{ github.sha }}.vst
           path: zig-cache/vst/zig-analyzer.vst
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v1.3.0
+        with:
+          version: master
+      - name: Build VST
+        run: "zig build -Drelease-fast"
+      - uses: actions/upload-artifact@v2
+        with:
+          name: zig-analyzer-windows-${{ github.sha }}.dll
+          path: zig-cache/lib/zig-analyzer.dll
