@@ -23,6 +23,8 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v1.3.0
         with:
