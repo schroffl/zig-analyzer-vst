@@ -1,9 +1,11 @@
 const std = @import("std");
 const known_folders = @import("known-folders");
 const api = @import("./api.zig");
+const shared = @import("./shared.zig");
 
 const allocator = std.heap.page_allocator;
 var log_file: ?std.fs.File = null;
+var log_writer: ?std.fs.File.Writer = null;
 
 pub fn log(
     comptime message_level: std.log.Level,
@@ -23,8 +25,7 @@ pub fn log(
     };
     const prefix2 = if (scope == .default) ": " else "(" ++ @tagName(scope) ++ "): ";
 
-    if (log_file) |file| {
-        var writer = file.writer();
+    if (log_writer) |writer| {
         writer.print(level_txt ++ prefix2 ++ format ++ "\n", args) catch return;
     }
 }
@@ -58,7 +59,7 @@ export fn VSTPluginMain(callback: api.HostCallback) ?*api.AEffect {
         .version = 0,
 
         .num_programs = 0,
-        .num_params = 1,
+        .num_params = shared.Parameters.count,
         .num_inputs = 2,
         .num_outputs = 2,
         .flags = api.Plugin.Flag.toBitmask(&[_]api.Plugin.Flag{
@@ -75,13 +76,12 @@ export fn VSTPluginMain(callback: api.HostCallback) ?*api.AEffect {
     }) catch unreachable;
 
     log_file = cwd.createFile(log_path, .{}) catch unreachable;
+    log_writer = log_file.?.writer();
 
     std.log.debug("\n\n===============\nCreated log file", .{});
 
     return effect;
 }
-
-var params = [_]f32{0};
 
 fn onDispatch(
     effect: *api.AEffect,
@@ -108,7 +108,7 @@ fn onDispatch(
                 return 0;
             };
 
-            plugin_ptr.* = Plugin.init() catch |err| {
+            Plugin.init(plugin_ptr) catch |err| {
                 std.log.crit("Plugin.init failed: {}", .{err});
                 return 0;
             };
@@ -116,6 +116,7 @@ fn onDispatch(
             effect.user = plugin_ptr;
         },
         .SetSampleRate => {
+            std.log.debug("Sample rate: {}", .{opt});
             if (Plugin.fromEffect(effect)) |plugin| plugin.sample_rate = opt;
         },
         .SetBufferSize => {
@@ -147,10 +148,7 @@ fn onDispatch(
             rect.bottom = 500;
 
             var rect_ptr = @ptrCast(**c_void, @alignCast(@alignOf(**c_void), ptr.?));
-
             rect_ptr.* = rect;
-
-            std.log.debug("Rect: {}", .{rect});
 
             return 1;
         },
@@ -158,7 +156,7 @@ fn onDispatch(
             std.log.debug("EditorOpen: {}", .{ptr.?});
 
             if (Plugin.fromEffect(effect)) |plugin| {
-                plugin.renderer.editorOpen(ptr.?);
+                plugin.renderer.editorOpen(ptr.?) catch unreachable;
             }
 
             return 1;
@@ -173,18 +171,34 @@ fn onDispatch(
             return 1;
         },
         .GetParameterDisplay => {
-            const val = params[@intCast(usize, index)];
-            const str = std.fmt.allocPrint(allocator, "{d:.5}", .{val}) catch unreachable;
-            defer allocator.free(str);
-            _ = setData(u8, ptr.?, str, 64);
+            std.log.debug("GetParameterDisplay for {}", .{index});
+
+            if (Plugin.fromEffect(effect)) |plugin| {
+                var out: [api.ParamMaxLength]u8 = undefined;
+                const str = plugin.params.displayByIndex(@intCast(usize, index), &out) orelse "Unknown";
+                _ = setData(u8, ptr.?, str, out.len);
+            } else {
+                _ = setData(u8, ptr.?, "Unknown", api.ParamMaxLength);
+            }
         },
         .GetParameterName => {
-            _ = setData(u8, ptr.?, "Graph Scale", 64);
+            if (shared.Parameters.getDescription(@intCast(usize, index))) |desc| {
+                _ = setData(u8, ptr.?, desc.name, api.ParamMaxLength);
+            } else {
+                _ = setData(u8, ptr.?, "Unknown", api.ParamMaxLength);
+            }
         },
         .GetParameterLabel => {
-            _ = setData(u8, ptr.?, "Yo", 64);
+            if (shared.Parameters.getDescription(@intCast(usize, index))) |desc| {
+                _ = setData(u8, ptr.?, desc.label, api.ParamMaxLength);
+            } else {
+                _ = setData(u8, ptr.?, "Unknown", api.ParamMaxLength);
+            }
         },
-        .CanBeAutomated => return 1,
+        .CanBeAutomated => {
+            const desc = shared.Parameters.getDescription(@intCast(usize, index)) orelse return 0;
+            return if (desc.automatable) 1 else 0;
+        },
         .EditorIdle => {},
         else => {
             const t = std.time.milliTimestamp();
@@ -196,12 +210,13 @@ fn onDispatch(
 }
 
 fn setParameter(effect: *api.AEffect, index: i32, parameter: f32) callconv(.C) void {
-    std.log.debug("setParameter: {}", .{parameter});
-    params[@intCast(usize, index)] = parameter;
+    const plugin = Plugin.fromEffect(effect) orelse return;
+    plugin.params.setByIndex(@intCast(usize, index), parameter);
 }
 
 fn getParameter(effect: *api.AEffect, index: i32) callconv(.C) f32 {
-    return params[@intCast(usize, index)];
+    const plugin = Plugin.fromEffect(effect) orelse return 0;
+    return plugin.params.getByIndex(@intCast(usize, index)) orelse 0;
 }
 
 fn processReplacing(effect: *api.AEffect, inputs: [*][*]f32, outputs: [*][*]f32, num_frames: i32) callconv(.C) void {
@@ -243,23 +258,25 @@ fn setData(comptime T: type, ptr: *c_void, data: []const T, max_length: usize) u
 const Plugin = struct {
     sample_rate: ?f32 = null,
     buffer_size: ?isize = null,
+    params: shared.Parameters,
 
     sample_buffer: ?[]f32 = null,
     renderer: switch (std.Target.current.os.tag) {
         .macos => @import("./macos/renderer.zig").Renderer,
-        else => @compileError("No renderer for target OS"),
+        .windows => @import("./windows/renderer.zig").Renderer,
+        else => @compileError("There's no renderer for the target platform"),
     },
 
-    fn init() !Plugin {
-        var plugin: Plugin = undefined;
-
-        const vst_path = try resolveVSTPath(allocator);
-
-        plugin.renderer = try @TypeOf(plugin.renderer).init(allocator, vst_path);
+    fn init(plugin: *Plugin) !void {
+        plugin.params = shared.Parameters{};
         plugin.sample_rate = null;
         plugin.buffer_size = null;
 
-        return plugin;
+        plugin.renderer = switch (std.Target.current.os.tag) {
+            .macos => try @import("./macos/renderer.zig").Renderer.init(allocator, &plugin.params),
+            .windows => try @import("./windows/renderer.zig").Renderer.init(allocator, &plugin.params),
+            else => unreachable,
+        };
     }
 
     fn fromEffect(effect: *api.AEffect) ?*Plugin {
@@ -269,22 +286,3 @@ const Plugin = struct {
         return ptr;
     }
 };
-
-fn resolveVSTPath(alloc: *std.mem.Allocator) ![]const u8 {
-    const dlfcn = @cImport({
-        @cInclude("dlfcn.h");
-    });
-
-    var info: dlfcn.Dl_info = undefined;
-    const success = dlfcn.dladdr(VSTPluginMain, &info);
-
-    if (success == 1) {
-        const name = @ptrCast([*:0]const u8, info.dli_fname);
-        var name_slice = try alloc.alloc(u8, std.mem.len(name));
-        @memcpy(name_slice.ptr, name, name_slice.len);
-        return std.fs.path.dirname(name_slice) orelse return error.DirnameFailed;
-    } else {
-        std.log.err("dladdr returned {}", .{success});
-        return error.dladdrFailed;
-    }
-}

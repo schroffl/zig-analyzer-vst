@@ -174,6 +174,7 @@ pub const Rect = extern struct {
 
 pub const ProductNameMaxLength = 64;
 pub const VendorNameMaxLength = 64;
+pub const ParamMaxLength = 32;
 
 pub const PluginMain = fn (
     callback: HostCallback,

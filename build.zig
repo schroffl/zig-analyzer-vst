@@ -10,9 +10,13 @@ pub fn build(b: *Builder) void {
         .patch = 0,
     };
 
+    // For some reason a versioned shared library causes zig build to crash
+    // on windows.
+    const target_tag = target.os_tag orelse std.Target.current.os.tag;
+
     var bundle_step = MacOSBundle.create(b, "zig-analyzer", "src/main.zig", .{
         .identifier = "org.zig-analyzer",
-        .version = version,
+        .version = if (target_tag == .windows) null else version,
         .target = target,
         .mode = mode,
     });
@@ -29,7 +33,7 @@ pub fn build(b: *Builder) void {
 const MacOSBundle = struct {
     pub const Options = struct {
         identifier: []const u8,
-        version: std.builtin.Version,
+        version: ?std.builtin.Version = null,
 
         target: std.zig.CrossTarget = std.zig.CrossTarget{},
         mode: ?std.builtin.Mode = null,
@@ -44,9 +48,14 @@ const MacOSBundle = struct {
     pub fn create(builder: *Builder, name: []const u8, root_src: []const u8, options: Options) *MacOSBundle {
         const self = builder.allocator.create(MacOSBundle) catch unreachable;
 
+        if (options.version) |version| {
+            self.lib_step = builder.addSharedLibrary(name, root_src, .{ .versioned = version });
+        } else {
+            self.lib_step = builder.addSharedLibrary(name, root_src, .{ .unversioned = {} });
+        }
+
         self.builder = builder;
         self.name = name;
-        self.lib_step = builder.addSharedLibrary(name, root_src, .{ .versioned = options.version });
         self.step = std.build.Step.init(.Custom, "macOS .vst bundle", builder.allocator, make);
         self.options = options;
 
@@ -164,11 +173,14 @@ const MacOSBundle = struct {
     fn writePlist(self: *MacOSBundle, file: std.fs.File) !void {
         var writer = file.writer();
         const template = @embedFile("./Info.plist");
-        const version_string = self.builder.fmt("{}.{}.{}", .{
-            self.options.version.major,
-            self.options.version.minor,
-            self.options.version.patch,
-        });
+        const version_string = if (self.options.version) |version|
+            self.builder.fmt("{}.{}.{}", .{
+                version.major,
+                version.minor,
+                version.patch,
+            })
+        else
+            "unversioned";
 
         var replace_idx: usize = 0;
         const replace = [_][]const u8{
