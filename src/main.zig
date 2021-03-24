@@ -286,3 +286,7 @@ const Plugin = struct {
         return ptr;
     }
 };
+
+test {
+    _ = @import("./util/matrix.zig");
+}

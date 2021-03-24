@@ -27,6 +27,9 @@ pub fn build(b: *Builder) void {
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&main_tests.step);
 
+    main_tests.addPackagePath("known-folders", "./libs/known-folders/known-folders.zig");
+    bundle_step.lib_step.addPackagePath("known-folders", "./libs/known-folders/known-folders.zig");
+
     b.default_step.dependOn(&bundle_step.step);
 }
 
@@ -62,7 +65,6 @@ const MacOSBundle = struct {
         if (options.mode) |mode| self.lib_step.setBuildMode(mode);
         self.lib_step.setTarget(options.target);
         self.lib_step.install();
-        self.lib_step.addPackagePath("known-folders", "./libs/known-folders/known-folders.zig");
 
         self.step.dependOn(&self.lib_step.step);
 
