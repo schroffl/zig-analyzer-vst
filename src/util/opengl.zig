@@ -74,8 +74,9 @@ glEnable: fn (Enum) void,
 glDisable: fn (Enum) void,
 glCullFace: fn (Enum) void,
 glBlendFunc: fn (Enum, Enum) void,
+glUniformMatrix4fv: fn (int, sizei, boolean, [*]const f32) void,
 
-pub fn callCheckError(self: *@This(), comptime name: []const u8, args: anytype) ReturnT: {
+pub fn callCheckError(self: @This(), comptime name: []const u8, args: anytype) ReturnT: {
     @setEvalBranchQuota(10000);
     const idx = std.meta.fieldIndex(@This(), name).?;
     const info = @typeInfo(std.meta.fields(@This())[idx].field_type);

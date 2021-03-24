@@ -5,6 +5,7 @@ layout(location = 1) in vec2 signal_frame;
 
 uniform float num_frames;
 uniform float graph_scale, dot_size;
+uniform mat4 matrix;
 
 out float time_decay;
 out float draw_clipped;
@@ -26,5 +27,5 @@ void main() {
 
     vec2 pos = frame + vertex_pos * dot_size;
     float z = time_decay;
-    gl_Position = vec4(pos, z, 1.0);
+    gl_Position = matrix * vec4(pos, z, 1.0);
 }

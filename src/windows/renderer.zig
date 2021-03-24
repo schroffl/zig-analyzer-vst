@@ -2,6 +2,7 @@ const std = @import("std");
 const GL = @import("../util/opengl.zig");
 const Ring = @import("../util/ring.zig");
 const shared = @import("../shared.zig");
+const Mat4 = @import("../util/matrix.zig");
 
 usingnamespace std.os.windows;
 
@@ -148,6 +149,8 @@ pub const Renderer = struct {
         const ds_location = opengl.callCheckError("glGetUniformLocation", .{ program, "dot_size" });
         const dc_location = opengl.callCheckError("glGetUniformLocation", .{ program, "dot_color" });
         const gs_location = opengl.callCheckError("glGetUniformLocation", .{ program, "graph_scale" });
+        const mat_location = opengl.callCheckError("glGetUniformLocation", .{ program, "matrix" });
+        const fo_location = opengl.callCheckError("glGetUniformLocation", .{ program, "frame_offset" });
 
         const tri = [_]f32{
             -1, -1,
@@ -188,16 +191,23 @@ pub const Renderer = struct {
 
         opengl.callCheckError("glUniform3f", .{ dc_location, 0.572, 0.909, 0.266 });
 
+        const matrix = Mat4.multiplyMany(&[_]Mat4{
+            Mat4.scale(std.math.sqrt1_2, std.math.sqrt1_2, 1),
+            Mat4.rotateZ(-std.math.pi / 4.0),
+        });
+
         while (!self.should_close) {
             gpu_ring.copyFromRing(&self.ring);
 
             opengl.glClearColor(0, 0, 0, 1);
             opengl.glClear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-            const num_frames = gpu_ring.max_capacity / 2;
-
+            opengl.callCheckError("glUniformMatrix4fv", .{ mat_location, 1, GL.GL_FALSE, &matrix.data });
             opengl.callCheckError("glUniform1f", .{ ds_location, self.params.get("Point Size") });
             opengl.callCheckError("glUniform1f", .{ gs_location, self.params.get("Graph Scale") });
+
+            const num_frames = gpu_ring.max_capacity / 2;
+
             opengl.callCheckError("glUniform1f", .{ nf_location, @intToFloat(f32, num_frames) });
             opengl.callCheckError("glDrawArraysInstanced", .{ GL.TRIANGLE_FAN, 0, 6, @intCast(GL.sizei, num_frames) });
 
