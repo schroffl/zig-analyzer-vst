@@ -18,6 +18,8 @@ jobs:
         uses: goto-bus-stop/setup-zig@v1.3.0
         with:
           version: master
+      - name: Run Tests
+        run: "zig build test"
       - name: Build VST
         run: "zig build -Drelease-fast"
       - name: 'Tar .vst directory'
@@ -37,6 +39,8 @@ jobs:
         uses: goto-bus-stop/setup-zig@v1.3.0
         with:
           version: master
+      - name: Run Tests
+        run: "zig build test"
       - name: Build VST
         run: "zig build -Drelease-fast"
       - uses: actions/upload-artifact@v2
