@@ -57,7 +57,7 @@ pub const AEffect = extern struct {
 };
 
 test "AEffect" {
-    testing.expectEqual(@as(i32, 0x56737450), AEffect.Magic);
+    try testing.expectEqual(@as(i32, 0x56737450), AEffect.Magic);
 }
 
 pub const Codes = struct {

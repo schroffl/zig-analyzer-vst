@@ -41,12 +41,12 @@ test "KeyMap" {
     var key_map = KeyMap{};
 
     key_map.set(0, true);
-    std.testing.expect(key_map.get(0));
-    std.testing.expect(!key_map.get(1));
+    try std.testing.expect(key_map.get(0));
+    try std.testing.expect(!key_map.get(1));
     key_map.set(0, false);
     key_map.set(1, true);
-    std.testing.expect(!key_map.get(0));
-    std.testing.expect(key_map.get(1));
+    try std.testing.expect(!key_map.get(0));
+    try std.testing.expect(key_map.get(1));
     key_map.set(145, true);
-    std.testing.expect(key_map.get(145));
+    try std.testing.expect(key_map.get(145));
 }

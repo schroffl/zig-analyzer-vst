@@ -293,6 +293,5 @@ const Plugin = struct {
 
 test {
     _ = @import("./util/matrix.zig");
-    _ = @import("./layout.zig");
     std.testing.refAllDecls(@This());
 }

@@ -149,8 +149,8 @@ test "multiply" {
         7, 30, 10, 14,
     });
 
-    std.testing.expect(Mat4.approxEq(result, expected, 0.01));
-    std.testing.expect(Mat4.approxEq(result_many, expected, 0.01));
+    try std.testing.expect(Mat4.approxEq(result, expected, 0.01));
+    try std.testing.expect(Mat4.approxEq(result_many, expected, 0.01));
 }
 
 test "rotateZ" {
@@ -158,6 +158,6 @@ test "rotateZ" {
     const result = multiply(identity, rotation);
     const result_reverse = multiply(rotation, identity);
 
-    std.testing.expect(approxEq(result, rotation, 0.01));
-    std.testing.expect(approxEq(result_reverse, rotation, 0.01));
+    try std.testing.expect(approxEq(result, rotation, 0.01));
+    try std.testing.expect(approxEq(result_reverse, rotation, 0.01));
 }
