@@ -30,6 +30,11 @@ pub fn build(b: *Builder) void {
         else => {},
     }
 
+    var log_step = b.addLog("Target: {}", .{target});
+    var log_step_2 = b.addLog("Current Target: {}", .{std.Target.current});
+    bundle_step.lib_step.step.dependOn(&log_step.step);
+    bundle_step.lib_step.step.dependOn(&log_step_2.step);
+
     var main_tests = b.addTest("src/main.zig");
     main_tests.setBuildMode(mode);
 
