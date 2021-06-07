@@ -63,10 +63,14 @@ pub const ReadMaxIterator = struct {
     }
 };
 
+pub fn available(self: Ring) usize {
+    return self.write_idx - self.read_idx;
+}
+
 pub fn readSlice(self: *Ring) SliceResult {
     var result: SliceResult = undefined;
 
-    const available = self.write_idx - self.read_idx;
+    const count = self.available();
 
     const read_idx = self.read_idx % self.buffer.len;
     const write_idx = self.write_idx % self.buffer.len;
@@ -82,7 +86,7 @@ pub fn readSlice(self: *Ring) SliceResult {
         result.count = result.first.len;
     }
 
-    self.read_idx += available;
+    self.read_idx += count;
 
     return result;
 }

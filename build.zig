@@ -28,7 +28,9 @@ pub fn build(b: *Builder) void {
     test_step.dependOn(&main_tests.step);
 
     main_tests.addPackagePath("known-folders", "./libs/known-folders/known-folders.zig");
+    main_tests.addPackagePath("zigimg", "./libs/zigimg/zigimg.zig");
     bundle_step.lib_step.addPackagePath("known-folders", "./libs/known-folders/known-folders.zig");
+    bundle_step.lib_step.addPackagePath("zigimg", "./libs/zigimg/zigimg.zig");
 
     b.default_step.dependOn(&bundle_step.step);
 }

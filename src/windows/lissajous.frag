@@ -9,11 +9,11 @@ out vec4 color;
 
 void main() {
     float d = distance(dot_pos, vec2(0.0));
-    float alpha = time_decay * 0.5 + 0.5;
+    float alpha = time_decay * 0.8 + 0.2;
 
     if (draw_clipped > 0.0) {
         color = vec4(1.0, 0.0, 0.0, 1.0);
     } else {
-        color = vec4(dot_color, alpha);
+        color = vec4(dot_color, 1.0);
     }
 }

@@ -144,8 +144,8 @@ fn onDispatch(
 
             rect.top = 0;
             rect.left = 0;
-            rect.right = 500;
-            rect.bottom = 500;
+            rect.right = 900;
+            rect.bottom = 900;
 
             var rect_ptr = @ptrCast(**c_void, @alignCast(@alignOf(**c_void), ptr.?));
             rect_ptr.* = rect;
@@ -199,7 +199,7 @@ fn onDispatch(
             const desc = shared.Parameters.getDescription(@intCast(usize, index)) orelse return 0;
             return if (desc.automatable) 1 else 0;
         },
-        .EditorIdle => {},
+        .EditorKeyDown, .EditorKeyUp, .EditorIdle => {},
         else => {
             const t = std.time.milliTimestamp();
             std.log.debug("{d:.} Unhandled opcode: {} {} {} {} {}", .{ t, code, index, value, ptr, opt });
@@ -259,11 +259,12 @@ const Plugin = struct {
     sample_rate: ?f32 = null,
     buffer_size: ?isize = null,
     params: shared.Parameters,
+    editor: @import("./editor.zig"),
 
     sample_buffer: ?[]f32 = null,
     renderer: switch (std.Target.current.os.tag) {
         .macos => @import("./macos/renderer.zig").Renderer,
-        .windows => @import("./windows/renderer.zig").Renderer,
+        .windows => @import("./windows/gl_wrapper.zig").Renderer,
         else => @compileError("There's no renderer for the target platform"),
     },
 
@@ -271,10 +272,13 @@ const Plugin = struct {
         plugin.params = shared.Parameters{};
         plugin.sample_rate = null;
         plugin.buffer_size = null;
+        plugin.editor = .{
+            .params = &plugin.params,
+        };
 
         plugin.renderer = switch (std.Target.current.os.tag) {
-            .macos => try @import("./macos/renderer.zig").Renderer.init(allocator, &plugin.params),
-            .windows => try @import("./windows/renderer.zig").Renderer.init(allocator, &plugin.params),
+            .macos => try @import("./macos/renderer.zig").Renderer.init(allocator, &plugin.editor),
+            .windows => try @import("./windows/gl_wrapper.zig").Renderer.init(allocator, &plugin.editor),
             else => unreachable,
         };
     }
@@ -289,4 +293,6 @@ const Plugin = struct {
 
 test {
     _ = @import("./util/matrix.zig");
+    _ = @import("./layout.zig");
+    std.testing.refAllDecls(@This());
 }

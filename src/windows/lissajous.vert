@@ -12,7 +12,7 @@ out float draw_clipped;
 out vec2 dot_pos;
 
 void main() {
-    vec2 frame = signal_frame * graph_scale;
+    vec2 frame = signal_frame.xy * graph_scale;
 
     vec2 abs_frame = abs(frame);
     float max_sample = max(abs_frame.x, abs_frame.y);
@@ -22,10 +22,10 @@ void main() {
         frame = frame / max_sample;
     }
 
-    time_decay = gl_InstanceID / num_frames;
+    time_decay = (gl_InstanceID) / num_frames;
     dot_pos = vertex_pos;
 
-    vec2 pos = frame + vertex_pos * dot_size;
-    float z = time_decay;
+    vec2 pos = frame.yx + vertex_pos * dot_size;
+    float z = time_decay * 2.0 - 1.0;
     gl_Position = matrix * vec4(pos, z, 1.0);
 }

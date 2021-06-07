@@ -94,6 +94,8 @@ pub const Codes = struct {
         GetParameterName = 8,
         CanBeAutomated = 26,
         EditorIdle = 19,
+        EditorKeyDown = 59,
+        EditorKeyUp = 60,
 
         pub fn toInt(self: HostToPlugin) i32 {
             return @enumToInt(self);

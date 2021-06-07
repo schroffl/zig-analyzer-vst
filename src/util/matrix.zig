@@ -32,7 +32,7 @@ pub fn multiply(a: Mat4, b: Mat4) Mat4 {
     return out;
 }
 
-pub fn multiplyMany(matrices: []Mat4) Mat4 {
+pub fn multiplyMany(matrices: []const Mat4) Mat4 {
     var current = matrices[0];
     std.debug.assert(matrices.len >= 1);
 
