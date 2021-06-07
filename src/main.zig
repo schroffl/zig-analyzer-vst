@@ -277,7 +277,7 @@ const Plugin = struct {
         };
 
         plugin.renderer = switch (std.Target.current.os.tag) {
-            .macos => try @import("./macos/renderer.zig").Renderer.init(allocator, &plugin.editor),
+            .macos => try @import("./macos/renderer.zig").Renderer.init(allocator, &plugin.editor.params),
             .windows => try @import("./windows/gl_wrapper.zig").Renderer.init(allocator, &plugin.editor),
             else => unreachable,
         };
