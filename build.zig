@@ -21,6 +21,15 @@ pub fn build(b: *Builder) void {
         .mode = mode,
     });
 
+    switch (target_tag) {
+        .windows => {
+            bundle_step.lib_step.linkSystemLibrary("user32");
+            bundle_step.lib_step.linkSystemLibrary("gdi32");
+            bundle_step.lib_step.linkSystemLibrary("opengl32");
+        },
+        else => {},
+    }
+
     var main_tests = b.addTest("src/main.zig");
     main_tests.setBuildMode(mode);
 
