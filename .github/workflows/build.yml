@@ -23,7 +23,7 @@ jobs:
       - name: Build VST
         run: "zig build -Drelease-fast"
       - name: 'Tar .vst directory'
-        run: tar -cvf zig-analyzer.vst.tar zig-cache/vst/zig-analyzer.vst
+        run: tar -cvf zig-analyzer.vst.tar zig-out/vst/zig-analyzer.vst
       - uses: actions/upload-artifact@v2
         with:
           name: zig-analyzer-macos-${{ github.sha }}.vst
@@ -46,4 +46,4 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: zig-analyzer-windows-${{ github.sha }}.dll
-          path: zig-cache/lib/zig-analyzer.dll
+          path: zig-out/lib/zig-analyzer.dll
